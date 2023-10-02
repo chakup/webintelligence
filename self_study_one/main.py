@@ -19,14 +19,15 @@ VERY_FREQUENT = 3
 FREQUENT = 2
 NOT_FREQUENT = 1
 
-url_list = ["https://www.facebook.com/", 
+url_seeds = ["https://www.facebook.com/", 
             "https://www.cnn.com/",
             "https://www.9gag.com/",
-            "https://www.aau.dk/"
+            "https://www.aau.dk/",
             "https://www.amazon.com/"
             ]
 # Frontier to be crawled
-url_queue = PriorityQueue()
+frontier_queue = PriorityQueue()
+back_frontier_queue = PriorityQueue()
 
 # Back frontier information about crawled URLS (heap) timestamp
 ##
@@ -76,6 +77,15 @@ def prioritizer():
     prioritize_url("https://www.9gag.com/")
 
 
+def add_to_frontier_queue(url):
+    ## Check URL
+    if url == "/":
+        print("Not a valid url seed. Excluding...")
+    else:
+        print(f"Adding {url} to frontier queue...")
+        frontier_queue.put_nowait(url)
+        print(f"Added {url}")
+
 
 """
 Front worker represents the front queues. It is used for prioritization
@@ -89,8 +99,13 @@ estimate).
 
 """
 def front_worker():
-    while True:
-        item = url_queue.get()
+    for url in url_seeds:
+        print(f"Adding {url} to frontier_queue")
+        frontier_queue.put_nowait(url)
+
+    while(frontier_queue.not_empty):
+        crawl(frontier_queue.get_nowait())
+
 
 
 """
@@ -102,27 +117,42 @@ does not hit the same server.
 def back_worker():
     pass
 
-
+## Discover new pages and crawl them
 def crawl(url):
+    print(f"Crawling {url}...")
     rp = RobotFileParser()
     rp.set_url(url)
     rp.read()
 
     print(rp.can_fetch("*", url))
 
+    print(f"Sending GET request to {url}")
     r = requests.get(url)
     r_parse = BeautifulSoup(r.text, "html.parser")
-    print(r_parse.prettify())
+    print("Looking for all links...")
+    for a in r_parse.find_all('a', href=True):
+        sleep(2)
+        print("DEEEBUG", a["href"])
+        print("Found ", a["href"])
+        # add_to_frontier_queue(a["href"])
 
 def main():
 
-    ## Select from priority queue
-    prioritizer()
-    crawl(url)
+    # Start front worker
+    front_worker()
+
+    # prioritizer()
 
 
+
+def remove_url_duplicates(l, _instance):
+    for item in l:
+        match = _instance.search("(?P<url>https?://[^\s]+)", item)
+        if match is not None:
+            return (match.group("url"))
 
 if __name__ == "__main__":
     main()
-    prioritizer()
 
+
+## Consider tel: links and tlf: 
