@@ -3,10 +3,14 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 from time import sleep
 from urllib.robotparser import RobotFileParser
+from urllib.parse import urljoin, urlsplit
+from http.client import InvalidURL
 from queue import PriorityQueue
 import multiprocessing as mp
 import hashlib
 from heapq import heapify, heappush, heappop
+import validators
+
 """
 Heuristics for assinging priority:
 * Refresh rate sampled from previous crawls
@@ -19,11 +23,14 @@ VERY_FREQUENT = 3
 FREQUENT = 2
 NOT_FREQUENT = 1
 
-url_seeds = ["https://www.facebook.com/", 
-            "https://www.cnn.com/",
-            "https://www.9gag.com/",
-            "https://www.aau.dk/",
-            "https://www.amazon.com/"
+url_seeds = [
+    
+            # "https://www.facebook.com", 
+            # "https://www.cnn.com",
+            # "https://www.9gag.com",
+            "https://www.aau.dk",
+            # "https://www.amazon.com"
+
             ]
 # Frontier to be crawled
 frontier_queue = PriorityQueue()
@@ -77,9 +84,9 @@ def prioritizer():
     prioritize_url("https://www.9gag.com/")
 
 
-def add_to_frontier_queue(url):
-    ## Check URL
-    if url == "/":
+def add_to_frontier_queue(url: str):
+
+    if url == "/" or url[0] == "#":
         print("Not a valid url seed. Excluding...")
     else:
         print(f"Adding {url} to frontier queue...")
@@ -133,23 +140,33 @@ def crawl(url):
     for a in r_parse.find_all('a', href=True):
         sleep(2)
         print("DEEEBUG", a["href"])
-        print("Found ", a["href"])
-        # add_to_frontier_queue(a["href"])
 
+        retrieved_url = a["href"]
+
+
+        if not urlsplit(retrieved_url).scheme:
+            if validators.url(retrieved_url):
+                add_to_frontier_queue(retrieved_url)
+            else:
+                new_url = urljoin(url, retrieved_url)
+                try:
+                    rp.set_url(new_url)
+                    rp.read()
+                    rp.can_fetch("*", new_url)
+
+                    if validators.url(new_url):
+                        add_to_frontier_queue(new_url)
+                except InvalidURL:
+                    print("Invalid url skipping")
+        else:
+            print(retrieved_url)
+            print("No valid")
 def main():
 
     # Start front worker
     front_worker()
 
     # prioritizer()
-
-
-
-def remove_url_duplicates(l, _instance):
-    for item in l:
-        match = _instance.search("(?P<url>https?://[^\s]+)", item)
-        if match is not None:
-            return (match.group("url"))
 
 if __name__ == "__main__":
     main()
