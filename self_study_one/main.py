@@ -25,11 +25,11 @@ NOT_FREQUENT = 1
 
 url_seeds = [
     
-            # "https://www.facebook.com", 
-            # "https://www.cnn.com",
-            # "https://www.9gag.com",
+            "https://www.facebook.com", 
+            "https://www.cnn.com",
+            "https://www.9gag.com",
             "https://www.aau.dk",
-            # "https://www.amazon.com"
+            "https://www.amazon.com"
 
             ]
 # Frontier to be crawled
@@ -111,7 +111,12 @@ def front_worker():
         frontier_queue.put_nowait(url)
 
     while(frontier_queue.not_empty):
+
+        print("Crawling new !!!")
         crawl(frontier_queue.get_nowait())
+        print("_____________")
+        print(frontier_queue.unfinished_tasks)
+        print("_____________")
 
 
 
@@ -143,29 +148,33 @@ def crawl(url):
 
         retrieved_url = a["href"]
 
+        if retrieved_url.strip():
+            if not urlsplit(retrieved_url).scheme and retrieved_url[0] != "#" or url in url_seeds:
+                ## check if 
+                retrieved_url = urljoin(url, retrieved_url)
+            if urlsplit(retrieved_url).scheme == "http" or urlsplit(retrieved_url).scheme == "https":
+                if validators.url(retrieved_url):
+                    add_to_frontier_queue(retrieved_url)
+                else:
+                    new_url = urljoin(url, retrieved_url) 
+                    print("READING", new_url)
+                    try:
+                        rp.set_url(new_url)
+                        rp.read()
+                        rp.can_fetch("*", new_url)
 
-        if not urlsplit(retrieved_url).scheme:
-            if validators.url(retrieved_url):
-                add_to_frontier_queue(retrieved_url)
+                        if validators.url(new_url):
+                            add_to_frontier_queue(new_url)
+                    except InvalidURL:
+                        print("Invalid url skipping")
             else:
-                new_url = urljoin(url, retrieved_url)
-                try:
-                    rp.set_url(new_url)
-                    rp.read()
-                    rp.can_fetch("*", new_url)
-
-                    if validators.url(new_url):
-                        add_to_frontier_queue(new_url)
-                except InvalidURL:
-                    print("Invalid url skipping")
-        else:
-            print(retrieved_url)
-            print("No valid")
+                print(retrieved_url)
+                print("No valid")
 def main():
 
     # Start front worker
     front_worker()
-
+    
     # prioritizer()
 
 if __name__ == "__main__":
