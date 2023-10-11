@@ -145,9 +145,7 @@ def crawl(url):
     for a in r_parse.find_all('a', href=True):
         sleep(2)
         print("DEEEBUG", a["href"])
-
         retrieved_url = a["href"]
-
         if retrieved_url.strip():
             if not urlsplit(retrieved_url).scheme and retrieved_url[0] != "#" or url in url_seeds:
                 ## check if 
