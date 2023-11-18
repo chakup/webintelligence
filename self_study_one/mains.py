@@ -9,7 +9,6 @@ from queue import PriorityQueue
 import multiprocessing as mp
 import hashlib
 from heapq import heapify, heappush, heappop
-import validators
 import heapq
 import datetime
 import itertools
@@ -114,17 +113,19 @@ function of both its change rate and its quality (using some reasonable quality
 estimate).
 
 """
+
 def front_worker():
     limit = 0
     for url in url_seeds:
         print(f"Adding {url} to frontier_queue")
         add_task(url) # We add task with the same priority: 0
 
+
     while (limit < 1000): # Stop when you have crawled approx. 1000 pages
         while(len(pq) != 0):
-
-            print("Crawling new !!!")
+            print("This is whats in PQ now:", pq)
             # Check if it has been crawled before. Create a heap with a timestamp
+            sleep(2)
             crawl(pop_task())
             limit += 1
             print("Counter is at ", limit)
@@ -142,23 +143,25 @@ def back_worker():
 
 ## Discover new pages and crawl them
 def crawl(url):
-    try:
-        print(f"Crawling {url}...")
-        rp = RobotFileParser()
-        rp.set_url(url)
-        rp.read()
-        print(rp.can_fetch("*", url))
-        print(f"Sending GET request to {url}")
-        r = requests.get(url)
-        r_parse = BeautifulSoup(r.text, "html.parser")
-        print("Looking for all links...")
-        for a in r_parse.find_all('a', href=True):
-            sleep(2)
-            print("DEEEBUG", a["href"])
-            retrieved_url = a["href"]
-            add_to_frontier_queue(retrieved_url)
-    except Exception as e:
-        print("Skipping", e)
+
+    if url not in pq: # We do not want duplication
+        try:
+            print(f"Crawling {url}...")
+            rp = RobotFileParser()
+            rp.set_url(url)
+            rp.read()
+            print(rp.can_fetch("*", url))
+            print(f"Sending GET request to {url}")
+            r = requests.get(url)
+            r_parse = BeautifulSoup(r.text, "html.parser")
+            print("Looking for all links...")
+            for a in r_parse.find_all('a', href=True):
+                retrieved_url = a["href"]
+                add_task((url, retrieved_url))
+        except Exception as e:
+            print("Skipping", e)
+    else:
+        print("Skipping")
 
 
 def main():

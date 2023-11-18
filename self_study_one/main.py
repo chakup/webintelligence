@@ -113,6 +113,7 @@ def front_worker():
     while(frontier_queue.not_empty):
 
         print("Crawling new !!!")
+        print(frontier_queue)
         crawl(frontier_queue.get_nowait())
         print("_____________")
         print(frontier_queue.unfinished_tasks)
