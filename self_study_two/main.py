@@ -4,23 +4,85 @@ from time import sleep
 from urllib.robotparser import RobotFileParser
 from heapq import heapify, heappush, heappop
 import itertools
+from multiprocessing import Process
+from nltk.tokenize import word_tokenize
+from nltk import PorterStemmer
+
+corpus = []
+
+
+## https://www.youtube.com/watch?v=o5uqBRt-akw
+def and_postings(posting1, posting2):
+    p1 = 0
+    p2 = 0
+    result = list()
+
+    while p1 < len(posting1) and p2 < len(posting2):
+        if posting1[p1] == posting2[p2]:
+            result.append(posting1)
+            p1 += 1
+            p2 += 1
+        elif posting1[p1] > posting2[p2]:
+            p2 += 1
+        else:
+            p1 += 1
+    return result
+
+
+def or_postings(posting1, posting2):
+    p1 = 0
+    p2 = 0
+    result = list()
+    while p1 < len(posting1) and p2 < len(posting2):
+        if posting1[p1] == posting2[p2]:
+            result.append(posting1[p1])
+            p1 += 1
+            p2 += 1
+        elif posting1[p1] > posting2[p2]:
+            result.append(posting2[p2])
+            p2 += 1
+        else:
+            result.append(posting1[p1])
+            p1 += 1
+    while p1 < len(posting1):
+        result.append(posting1[p1])
+        p1 += 1
+    while p2 < len(posting2):
+        result.append(posting2[p2])
+        p2 +=1
+    return result
+
+
+def add_doc(doc):
+    # Tokenize doc into its own list
+    tokenized_doc = word_tokenize(doc)
+
+    ps = PorterStemmer()
+
+    for t in tokenized_doc:
+        print(ps.stem(t))
+
+    corpus.append(tokenized_doc)
+    invert_index()
 
 
 
-corpus = set(["book", "car", "social", "media", "person", "human"])
-
-#https://www.youtube.com/watch?v=1g00SP56iSE
+inverted_index = {}
 
 
-
-
-
+def invert_index():
+    for i, doc in enumerate(corpus):
+        for term in doc:
+            if term in inverted_index:
+                inverted_index[term].add(i)
+            else: inverted_index[term] = {i}
 
 
 pq = []
 entry_finder = {}
 REMOVED = '<removed-taks>'
 counter= itertools.count()
+
 
 
 def add_task(task, priority=0):
@@ -46,16 +108,13 @@ def pop_task():
             return task
     raise KeyError('pop from an empty priority queue')
 
-
-
 seed_urls = [
-            "https://www.facebook.com", 
+            #"https://www.facebook.com", 
             "https://www.cnn.com",
             "https://www.9gag.com",
             "https://www.aau.dk",
             "https://www.amazon.com"
             ]
-
 
 def crawl(seed_urls, max=1000):
     visited_urls = set()
@@ -75,15 +134,24 @@ def crawl(seed_urls, max=1000):
                     try:
                         r = requests.get(current_url)
                         soup = BeautifulSoup(r.text, 'html.parser')
-
                         title = soup.find("title").string if soup.find("title") else "No title"
                         print(f"URL: {current_url}\nTitle: {title}\n")
+
+                        ### Add title and link to corpus
+
+                        add_doc(title)
+
+                        print("___________")
+                        print(and_postings("new", "break"))
+                        print(or_postings("new", "and"))
+                        print("___________")
+
 
                         for a in soup.find_all("a"):
                             sleep(2)
                             next_url = a["href"]
                             if next_url and next_url.startswith("http"):
-                                print(next_url)
+                                #print(next_url)
                                 queue.append(next_url)
                         visited_urls.add(current_url)
                         pages_crawled += 1
@@ -96,8 +164,18 @@ def crawl(seed_urls, max=1000):
                 
                 
 
+def create_job(target, *args):
+    p = Process(target=target, args=args)
+    p.start()
+    return p
+
 def main():
-    crawl(seed_urls)
+
+    ps = create_job(crawl, seed_urls)
+    ps.join()
+
+    
+
 
 
 if __name__ == "__main__":
