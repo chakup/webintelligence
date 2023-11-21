@@ -9,16 +9,13 @@ from queue import PriorityQueue
 import multiprocessing as mp
 import hashlib
 from heapq import heapify, heappush, heappop
-import validators
-import heapq
-import datetime
 import itertools
+from multiprocessing import Process
 """
 Heuristics for assinging priority:
 * Refresh rate sampled from previous crawls
 * Application-specific (e.g. "crawl news sites more often")
 """
-
 
 
 
@@ -68,6 +65,8 @@ url_seeds = [
             ]
 
 
+
+saved_title = []
 
 
 # Frontier to be crawled
@@ -121,8 +120,7 @@ def front_worker():
         add_task(url) # We add task with the same priority: 0
 
     while (limit < 1000): # Stop when you have crawled approx. 1000 pages
-        while(len(pq) != 0):
-
+        for url in pq:
             print("Crawling new !!!")
             # Check if it has been crawled before. Create a heap with a timestamp
             crawl(pop_task())
@@ -134,11 +132,17 @@ def front_worker():
 """
 Back worker ensures politeness in other words ensures that the it
 does not hit the same server.
-
-
 """
+
 def back_worker():
-    pass
+    while(len(pq) != 0):
+        r = requests.get(pop_task())
+        print("_________________")
+        print(r)
+        print("_________________")
+        r_parse = BeautifulSoup(r.text, "html.parser")
+        title = r_parse.find("title")
+        print(title)
 
 ## Discover new pages and crawl them
 def crawl(url):
@@ -163,11 +167,17 @@ def crawl(url):
 
 def main():
 
-    # Start front worker
-    front_worker()
-    
-    # prioritizer()
+    p1 = Process(target=front_worker)
+    p2 = Process(target=back_worker)
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
 
+    # front_worker()
+    # back_worker()
+
+    print("Done!")
 if __name__ == "__main__":
     main()
 
