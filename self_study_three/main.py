@@ -8,8 +8,11 @@ from multiprocessing import Process
 from nltk.tokenize import word_tokenize
 from nltk import PorterStemmer
 
-corpus = []
 
+
+
+corpus = []
+inverted_index = {}
 
 ## https://www.youtube.com/watch?v=o5uqBRt-akw
 def and_postings(posting1, posting2):
@@ -56,18 +59,20 @@ def or_postings(posting1, posting2):
 def add_doc(doc):
     # Tokenize doc into its own list
     tokenized_doc = word_tokenize(doc)
-
     ps = PorterStemmer()
-
     for t in tokenized_doc:
         print(ps.stem(t))
 
     corpus.append(tokenized_doc)
+    
     invert_index()
 
 
 
-inverted_index = {}
+
+
+def getTopK(query):
+    score = []
 
 
 def invert_index():
@@ -163,18 +168,9 @@ def create_job(target, *args):
     p = Process(target=target, args=args)
     p.start()
     return p
-
 def main():
-
     ps = create_job(crawl, seed_urls)
     ps.join()
 
-    
-
-
-
 if __name__ == "__main__":
     main()
-
-
-## Consider tel: links and tlf: 
