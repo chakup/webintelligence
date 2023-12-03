@@ -24,8 +24,11 @@ inverted_index = {}
 total_docs = 0
 
 
+def calculate_tf(term, document):
+
+
 def calculate_idf(term):
-    # Calculate Document Frequency (dfdf):
+    # Calculate Document Frequency (df):
 
     try:
         df = len(inverted_index[term])  # Document frequency
@@ -34,8 +37,6 @@ def calculate_idf(term):
         # Calculate IDF:
         idf = math.log(td / df)
         print(f"The Inverse Document frequency (idf) of term {term} is:", idf)
-        print(inverted_index)
-        print(inverted_index[term])
     except KeyError:
         print(f"The term {term} is not in the index!")
 
